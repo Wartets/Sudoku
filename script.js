@@ -2,7 +2,7 @@ document.addEventListener("DOMContentLoaded", () => {
     generateGrid();
 });
 
-function generateGrid() {
+/* function generateGrid() {
     let gridSize = parseInt(document.getElementById("gridSize").value);
     let filledPercentage = parseInt(document.getElementById("filledPercentage").value) / 100;
     let sudokuContainer = document.getElementById("sudoku-container");
@@ -20,7 +20,7 @@ function generateGrid() {
             cell.classList.add("sudoku-cell");
             cell.dataset.row = row;
             cell.dataset.col = col;
-            cell.maxLength = 1;
+            cell.maxLength = (N**2).toString().length;
 
             if ((row + 1) % gridSize === 0 && row !== N - 1) {
                 cell.dataset.rowEnd = "true";
@@ -85,7 +85,126 @@ function generateSudoku(N, gridSize, filledPercentage) {
 
     fillGrid();
 
-    // Suppression des valeurs en fonction du pourcentage choisi
+    let totalCells = N * N;
+    let cellsToRemove = Math.floor(totalCells * (1 - filledPercentage));
+
+    while (cellsToRemove > 0) {
+        let row = Math.floor(Math.random() * N);
+        let col = Math.floor(Math.random() * N);
+
+        if (grid[row][col] !== 0) {
+            grid[row][col] = 0;
+            cellsToRemove--;
+        }
+    }
+
+    return grid;
+} */
+
+function generateGrid() {
+    let gridSize = parseInt(document.getElementById("gridSize").value);
+    let filledPercentage = parseInt(document.getElementById("filledPercentage").value) / 100;
+    let sudokuContainer = document.getElementById("sudoku-container");
+    sudokuContainer.innerHTML = "";
+
+    let N = gridSize * gridSize;
+    sudokuContainer.style.gridTemplateColumns = `repeat(${N}, 1fr)`;
+
+    let grid = generateSudoku(N, gridSize, filledPercentage);
+
+    for (let row = 0; row < N; row++) {
+        for (let col = 0; col < N; col++) {
+            let cell = document.createElement("input");
+            cell.type = "text";
+            cell.classList.add("sudoku-cell");
+            cell.dataset.row = row;
+            cell.dataset.col = col;
+            cell.maxLength = (N**2).toString().length;
+
+            if ((row + 1) % gridSize === 0 && row !== N - 1) {
+                cell.dataset.rowEnd = "true";
+            }
+            if ((col + 1) % gridSize === 0 && col !== N - 1) {
+                cell.dataset.colEnd = "true";
+            }
+
+            if (grid[row][col] !== 0) {
+                cell.value = grid[row][col];
+                cell.readOnly = true;
+                cell.classList.add("preset");
+            } else {
+                cell.addEventListener("input", checkValidity);
+            }
+
+            sudokuContainer.appendChild(cell);
+        }
+    }
+}
+
+function generateSudoku(N, gridSize, filledPercentage) {
+    let grid = Array.from({ length: N }, () => Array(N).fill(0));
+
+    // Check if the number can be placed in the position
+    function isValid(row, col, num) {
+        for (let i = 0; i < N; i++) {
+            if (grid[row][i] === num || grid[i][col] === num) return false;
+        }
+
+        let boxRowStart = Math.floor(row / gridSize) * gridSize;
+        let boxColStart = Math.floor(col / gridSize) * gridSize;
+
+        for (let r = 0; r < gridSize; r++) {
+            for (let c = 0; c < gridSize; c++) {
+                if (grid[boxRowStart + r][boxColStart + c] === num) return false;
+            }
+        }
+
+        return true;
+    }
+
+    function fillGrid() {
+        let stack = [];
+        let row = 0;
+        let col = 0;
+
+        while (row < N) {
+            if (grid[row][col] === 0) {
+                let numbers = [...Array(N).keys()].map(x => x + 1).sort(() => Math.random() - 0.5);
+                let placed = false;
+
+                for (let num of numbers) {
+                    if (isValid(row, col, num)) {
+                        grid[row][col] = num;
+                        stack.push({ row, col });
+                        placed = true;
+                        break;
+                    }
+                }
+
+                if (!placed) {
+                    // Backtrack
+                    if (stack.length > 0) {
+                        let last = stack.pop();
+                        row = last.row;
+                        col = last.col + 1;
+                        grid[row][col] = 0;
+                        continue;
+                    } else {
+                        break;
+                    }
+                }
+            }
+
+            col++;
+            if (col >= N) {
+                col = 0;
+                row++;
+            }
+        }
+    }
+
+    fillGrid();
+
     let totalCells = N * N;
     let cellsToRemove = Math.floor(totalCells * (1 - filledPercentage));
 
@@ -102,7 +221,6 @@ function generateSudoku(N, gridSize, filledPercentage) {
     return grid;
 }
 
-
 function checkValidity(event) {
     let cell = event.target;
     let value = cell.value;
@@ -111,10 +229,10 @@ function checkValidity(event) {
     let gridSize = parseInt(document.getElementById("gridSize").value);
     let N = gridSize * gridSize;
 
-    if (!/^[1-9]$/.test(value) || parseInt(value) > N) {
-        cell.value = "";
-        return;
-    }
+	if (!/^\d+$/.test(value) || parseInt(value) < 1 || parseInt(value) > N) {
+		cell.value = "";
+		return;
+	}
 
     let cells = document.querySelectorAll(".sudoku-cell");
     let error = false;
